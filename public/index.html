@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Real-Time Tic Tac Toe</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="game" aria-label="Tic Tac Toe">
+        <header class="game-header">
+          <div>
+            <h1>Tic Tac Toe</h1>
+            <p id="roomLabel" class="muted">No room joined</p>
+          </div>
+          <span id="status" class="status">Connecting</span>
+        </header>
+
+        <section class="room-controls" aria-label="Room controls">
+          <button id="createRoom" type="button">Create Room</button>
+
+          <form id="joinForm" class="join-form">
+            <input
+              id="roomInput"
+              name="roomId"
+              type="text"
+              autocomplete="off"
+              placeholder="Room ID"
+            />
+            <button type="submit">Join</button>
+          </form>
+        </section>
+
+        <section class="game-info" aria-label="Game status">
+          <div>
+            <span class="label">You</span>
+            <strong id="playerLabel">-</strong>
+          </div>
+          <div>
+            <span class="label">Turn</span>
+            <strong id="turnLabel">-</strong>
+          </div>
+          <div>
+            <span class="label">Result</span>
+            <strong id="resultLabel">Playing</strong>
+          </div>
+        </section>
+
+        <section id="board" class="board" aria-label="Game board"></section>
+
+        <footer class="game-footer">
+          <p id="message" class="muted">Create a room or join one with a room id.</p>
+          <button id="resetGame" type="button" disabled>Reset</button>
+        </footer>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

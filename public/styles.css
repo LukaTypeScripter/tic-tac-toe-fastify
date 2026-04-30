@@ -1,0 +1,167 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f4f6fa;
+  color: #172033;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  height: 42px;
+  border-radius: 8px;
+  font: inherit;
+}
+
+button {
+  border: 0;
+  padding: 0 16px;
+  background: #1f6feb;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #e7edf7;
+  color: #172033;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  padding: 0 12px;
+}
+
+.app {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.game {
+  width: min(720px, 100%);
+  display: grid;
+  gap: 18px;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 20px;
+  box-shadow: 0 18px 50px rgba(23, 32, 51, 0.12);
+}
+
+.game-header,
+.room-controls,
+.game-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.muted,
+.label {
+  color: #667085;
+  font-size: 14px;
+}
+
+.status {
+  color: #667085;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.status.online {
+  color: #087443;
+}
+
+.status.offline {
+  color: #b42318;
+}
+
+.join-form {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto;
+  gap: 10px;
+  width: min(360px, 100%);
+}
+
+.game-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.game-info > div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #e3e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.board {
+  width: min(420px, 100%);
+  aspect-ratio: 1;
+  justify-self: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.cell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #ccd3df;
+  background: #ffffff;
+  color: #172033;
+  font-size: clamp(42px, 12vw, 76px);
+  font-weight: 800;
+}
+
+.cell:hover:not(:disabled) {
+  background: #eef5ff;
+}
+
+@media (max-width: 620px) {
+  .game-header,
+  .room-controls,
+  .game-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .join-form {
+    width: 100%;
+  }
+
+  .game-info {
+    grid-template-columns: 1fr;
+  }
+}
