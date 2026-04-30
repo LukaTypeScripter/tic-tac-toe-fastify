@@ -1,1 +1,0 @@
-{"version":3,"file":"web-socket-client.type.d.ts","sourceRoot":"","sources":["../../src/types/web-socket-client.type.ts"],"names":[],"mappings":"AAAA,MAAM,MAAM,eAAe,GAAG;IAC5B,UAAU,EAAE,MAAM,CAAC;IACnB,IAAI,CAAC,OAAO,EAAE,MAAM,GAAG,IAAI,CAAC;CAC7B,CAAC"}
