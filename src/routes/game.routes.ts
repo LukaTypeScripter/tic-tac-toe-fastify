@@ -1,17 +1,18 @@
 import type { FastifyInstance } from "fastify";
 import { roomManager } from "../services/room-manager.js";
+import type { ClientMessage } from "../types/server-message.type.js";
 
 export async function gameRoutes(app: FastifyInstance) {
   app.get("/game", { websocket: true }, (socket) => {
     socket.on("message", (data: unknown) => {
-      const message = JSON.parse(String(data));
+      const message: ClientMessage = JSON.parse(String(data));
 
       if (message.type === "create_room") {
-        roomManager.createRoom(socket);
+        roomManager.createRoom(socket, message.nickname);
       }
 
       if (message.type === "join_room") {
-        roomManager.joinRoom(message.roomId, socket);
+        roomManager.joinRoom(message.roomId, socket, message.nickname);
       }
 
       if (message.type === "make_move") {

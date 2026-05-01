@@ -106,14 +106,14 @@ h1 {
 
 .join-form {
   display: grid;
-  grid-template-columns: minmax(140px, 1fr) auto;
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) auto auto;
   gap: 10px;
-  width: min(360px, 100%);
+  width: 100%;
 }
 
 .game-info {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
@@ -159,6 +159,7 @@ h1 {
 
   .join-form {
     width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .game-info {

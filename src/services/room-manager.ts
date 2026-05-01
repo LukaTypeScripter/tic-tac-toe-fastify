@@ -1,9 +1,5 @@
-import type { Room } from "../types/room.type.js";
-import type {
-  Cell,
-  Player,
-  ServerMessage,
-} from "../types/server-message.type.js";
+import type { Cell, Player, Room } from "../types/room.type.js";
+import type { ServerMessage } from "../types/server-message.type.js";
 import type { WebSocketClient } from "../types/web-socket-client.type.js";
 
 const OPEN = 1;
@@ -13,7 +9,7 @@ type Seat = Player | "spectator";
 export class RoomManager {
   private readonly rooms = new Map<string, Room>();
 
-  createRoom(client: WebSocketClient) {
+  createRoom(client: WebSocketClient, nickName: string) {
     const roomId = this.createRoomId();
     const room: Room = {
       id: roomId,
@@ -21,17 +17,25 @@ export class RoomManager {
       turn: "X",
       winner: null,
       players: {
-        X: client,
+        X: {
+          client: client,
+          nickname: nickName,
+        },
       },
       spectators: new Set(),
     };
 
     this.rooms.set(roomId, room);
-    this.send(client, { type: "room_joined", roomId, player: "X" });
+    this.send(client, {
+      type: "room_joined",
+      roomId,
+      player: "X",
+      nickname: nickName,
+    });
     this.broadcastRoomState(room);
   }
 
-  joinRoom(roomId: string, client: WebSocketClient) {
+  joinRoom(roomId: string, client: WebSocketClient, nickName: string) {
     const room = this.rooms.get(roomId);
 
     if (!room) {
@@ -39,18 +43,23 @@ export class RoomManager {
       return;
     }
 
-    const player = this.assignSeat(room, client);
-    this.send(client, { type: "room_joined", roomId, player });
+    const player = this.assignSeat(room, client, nickName);
+    this.send(client, {
+      type: "room_joined",
+      roomId,
+      player,
+      nickname: nickName,
+    });
     this.broadcastRoomState(room);
   }
 
   leave(client: WebSocketClient) {
     for (const [roomId, room] of this.rooms.entries()) {
-      if (room.players.X === client) {
+      if (room.players.X?.client === client) {
         delete room.players.X;
       }
 
-      if (room.players.O === client) {
+      if (room.players.O?.client === client) {
         delete room.players.O;
       }
 
@@ -83,7 +92,7 @@ export class RoomManager {
       return;
     }
 
-    if (room.players[room.turn] !== client) {
+    if (room.players[room.turn]?.client !== client) {
       this.send(client, { type: "error", message: "It is not your turn." });
       return;
     }
@@ -132,14 +141,24 @@ export class RoomManager {
     return board.every(Boolean) ? "draw" : null;
   }
 
-  private assignSeat(room: Room, client: WebSocketClient): Seat {
+  private assignSeat(
+    room: Room,
+    client: WebSocketClient,
+    nickName: string,
+  ): Seat {
     if (!room.players.X) {
-      room.players.X = client;
+      room.players.X = {
+        nickname: nickName,
+        client,
+      };
       return "X";
     }
 
     if (!room.players.O) {
-      room.players.O = client;
+      room.players.O = {
+        nickname: nickName,
+        client,
+      };
       return "O";
     }
 
@@ -148,11 +167,22 @@ export class RoomManager {
   }
 
   private broadcastRoomState(room: Room) {
+    const players: { X?: string; O?: string } = {};
+
+    if (room.players.X) {
+      players.X = room.players.X.nickname;
+    }
+
+    if (room.players.O) {
+      players.O = room.players.O.nickname;
+    }
+
     const message: ServerMessage = {
       type: "game_state",
       roomId: room.id,
       board: room.board,
       turn: room.turn,
+      players,
       winner: room.winner,
     };
 
@@ -164,12 +194,12 @@ export class RoomManager {
   private getRoomClients(room: Room) {
     const clients: WebSocketClient[] = [];
 
-    if (room.players.X?.readyState === OPEN) {
-      clients.push(room.players.X);
+    if (room.players.X?.client.readyState === OPEN) {
+      clients.push(room.players.X.client);
     }
 
-    if (room.players.O?.readyState === OPEN) {
-      clients.push(room.players.O);
+    if (room.players.O?.client.readyState === OPEN) {
+      clients.push(room.players.O.client);
     }
 
     for (const spectator of room.spectators) {

@@ -1,13 +1,34 @@
+import { Type, type Static } from "@sinclair/typebox";
+
 import type { WebSocketClient } from "./web-socket-client.type.js";
 
-export type Room = {
-  id: string;
-  board: Array<"X" | "O" | null>;
-  turn: "X" | "O";
-  winner: "X" | "O" | "draw" | null;
-  players: {
-    X?: WebSocketClient;
-    O?: WebSocketClient;
-  };
-  spectators: Set<WebSocketClient>;
-};
+export const PlayerSchema = Type.Union([Type.Literal("X"), Type.Literal("O")]);
+
+export const CellSchema = Type.Union([PlayerSchema, Type.Null()]);
+
+export const WinnerSchema = Type.Union([
+  PlayerSchema,
+  Type.Literal("draw"),
+  Type.Null(),
+]);
+
+export const RoomPlayerSchema = Type.Object({
+  nickname: Type.String({ minLength: 1, maxLength: 24 }),
+  client: Type.Unsafe<WebSocketClient>(),
+});
+
+export const RoomSchema = Type.Object({
+  id: Type.String({ minLength: 1 }),
+  board: Type.Array(CellSchema, { minItems: 9, maxItems: 9 }),
+  turn: PlayerSchema,
+  winner: WinnerSchema,
+  players: Type.Object({
+    X: Type.Optional(RoomPlayerSchema),
+    O: Type.Optional(RoomPlayerSchema),
+  }),
+  spectators: Type.Unsafe<Set<WebSocketClient>>(),
+});
+
+export type Player = Static<typeof PlayerSchema>;
+export type Cell = Static<typeof CellSchema>;
+export type Room = Static<typeof RoomSchema>;
