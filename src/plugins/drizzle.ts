@@ -3,8 +3,12 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "../db/schema.js";
+import {existsSync} from "node:fs";
+import {loadEnvFile} from "node:process";
 
-type Db = NodePgDatabase<typeof schema>;
+
+
+export type Db = NodePgDatabase<typeof schema>;
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -14,6 +18,7 @@ declare module "fastify" {
 
 export default fp(async (fastify) => {
   const databaseUrl = process.env.DATABASE_URL;
+  console.log(databaseUrl)
 
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required to initialize Drizzle.");

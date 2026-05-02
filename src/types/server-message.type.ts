@@ -29,6 +29,7 @@ export const GameStateMessageSchema = Type.Object({
 
 export const ServerErrorSchema = Type.Object({
   type: Type.Literal("error"),
+  code: Type.Optional(Type.String()),
   message: Type.String(),
 });
 

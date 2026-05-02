@@ -1,6 +1,10 @@
+import { randomUUID } from "node:crypto";
+import type { FastifyInstance } from "fastify";
+
 import type { Cell, Player, Room } from "../types/room.type.js";
 import type { ServerMessage } from "../types/server-message.type.js";
 import type { WebSocketClient } from "../types/web-socket-client.type.js";
+import { RoomManagerError } from "./room-manager-error.js";
 
 const OPEN = 1;
 
@@ -9,47 +13,95 @@ type Seat = Player | "spectator";
 export class RoomManager {
   private readonly rooms = new Map<string, Room>();
 
-  createRoom(client: WebSocketClient, nickName: string) {
+  constructor(private readonly app?: FastifyInstance) {}
+
+  async createRoom(client: WebSocketClient, nickName: string) {
     const roomId = this.createRoomId();
-    const room: Room = {
+    const playerId = randomUUID();
+    let room: Room = {
       id: roomId,
       board: this.createBoard(),
       turn: "X",
       winner: null,
       players: {
         X: {
-          client: client,
           nickname: nickName,
+          client,
         },
       },
       spectators: new Set(),
     };
 
+    if (this.app) {
+      const createdRoom = await this.app.repositories.transaction(async (repositories) => {
+        const player = await repositories.player.create({
+          id: playerId,
+          nickName,
+        });
+
+        const room = await repositories.room.create({
+          id: roomId,
+          board: this.createDbBoard(),
+          turn: "X",
+          winnerId: null,
+        });
+
+        await repositories.roomPlayer.add({
+          roomId,
+          playerId,
+          mark: "X",
+        });
+        return { player, room };
+      });
+
+      if (!createdRoom) {
+        this.sendError(client, RoomManagerError.roomCantBeCreated());
+        return;
+      }
+
+      const hydratedRoom = await this.buildRoom(roomId);
+
+      if (!hydratedRoom) {
+        this.sendError(client, RoomManagerError.roomCantBeCreated());
+        return;
+      }
+
+      room = hydratedRoom;
+      room.players.X = {
+        nickname: nickName,
+        client,
+      };
+    }
+
     this.rooms.set(roomId, room);
+
     this.send(client, {
       type: "room_joined",
       roomId,
       player: "X",
       nickname: nickName,
     });
+
     this.broadcastRoomState(room);
   }
 
-  joinRoom(roomId: string, client: WebSocketClient, nickName: string) {
-    const room = this.rooms.get(roomId);
+  async joinRoom(roomId: string, client: WebSocketClient, nickName: string) {
+    const room = await this.getRoom(roomId);
 
     if (!room) {
-      this.send(client, { type: "error", message: "Room not found." });
+      this.sendError(client, RoomManagerError.roomNotFound());
       return;
     }
 
     const player = this.assignSeat(room, client, nickName);
+
     this.send(client, {
       type: "room_joined",
       roomId,
       player,
       nickname: nickName,
     });
+
     this.broadcastRoomState(room);
   }
 
@@ -78,22 +130,22 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      this.send(client, { type: "error", message: "Room not found." });
+      this.sendError(client, RoomManagerError.roomNotFound());
       return;
     }
 
     if (room.winner) {
-      this.send(client, { type: "error", message: "Game is already over." });
+      this.sendError(client, RoomManagerError.gameAlreadyOver());
       return;
     }
 
-    if (cellIndex < 0 || cellIndex > 8 || room.board[cellIndex]) {
-      this.send(client, { type: "error", message: "Invalid move." });
+    if (cellIndex < 0 || cellIndex > 8 || room.board[cellIndex] !== "EMPTY") {
+      this.sendError(client, RoomManagerError.invalidMove());
       return;
     }
 
     if (room.players[room.turn]?.client !== client) {
-      this.send(client, { type: "error", message: "It is not your turn." });
+      this.sendError(client, RoomManagerError.notPlayerTurn());
       return;
     }
 
@@ -133,12 +185,14 @@ export class RoomManager {
     ];
 
     for (const [a, b, c] of lines) {
-      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-        return board[a];
+      const first = board[a];
+
+      if (first && first !== "EMPTY" && first === board[b] && first === board[c]) {
+        return first;
       }
     }
 
-    return board.every(Boolean) ? "draw" : null;
+    return board.every((cell) => cell !== "EMPTY") ? "draw" : null;
   }
 
   private assignSeat(
@@ -194,11 +248,11 @@ export class RoomManager {
   private getRoomClients(room: Room) {
     const clients: WebSocketClient[] = [];
 
-    if (room.players.X?.client.readyState === OPEN) {
+    if (room.players.X?.client?.readyState === OPEN) {
       clients.push(room.players.X.client);
     }
 
-    if (room.players.O?.client.readyState === OPEN) {
+    if (room.players.O?.client?.readyState === OPEN) {
       clients.push(room.players.O.client);
     }
 
@@ -217,13 +271,71 @@ export class RoomManager {
     }
   }
 
+  private sendError(client: WebSocketClient, error: RoomManagerError) {
+    this.send(client, {
+      type: "error",
+      code: error.code,
+      message: error.message,
+    });
+  }
+
   private createBoard(): Cell[] {
-    return Array<Cell>(9).fill(null);
+    return Array<Cell>(9).fill("EMPTY");
+  }
+
+  private createDbBoard() {
+    return Array<"EMPTY">(9).fill("EMPTY");
   }
 
   private createRoomId() {
     return Math.random().toString(36).slice(2, 8).toUpperCase();
   }
-}
 
-export const roomManager = new RoomManager();
+  private async getRoom(roomId: string) {
+    return this.rooms.get(roomId) ?? await this.buildRoom(roomId);
+  }
+
+  private async buildRoom(roomId: string) {
+    if (!this.app) {
+      return null;
+    }
+
+    const roomRow = await this.app.repositories.room.findById(roomId);
+
+    if (!roomRow) {
+      return null;
+    }
+
+    const roomPlayers = await this.app.repositories.roomPlayer.findByRoomId(roomId);
+    const players: Room["players"] = {};
+
+    const roomPlayersIds =  roomPlayers.map((d) => d.playerId)
+
+    const playersList = await this.app.repositories.player.findByIds(roomPlayersIds);
+
+    for (const roomPlayer of roomPlayers) {
+
+      const player= playersList.find((p) => roomPlayer.playerId === p.id )
+
+      if (!player) {
+        continue
+      }
+
+      players[roomPlayer.mark] = {
+        nickname: player.nickName,
+      };
+    }
+
+    const room: Room = {
+      id: roomRow.id,
+      board: roomRow.board,
+      turn: roomRow.turn,
+      winner: this.checkWinner(roomRow.board),
+      players,
+      spectators: new Set(),
+    };
+
+    this.rooms.set(roomId, room);
+    return room;
+  }
+}

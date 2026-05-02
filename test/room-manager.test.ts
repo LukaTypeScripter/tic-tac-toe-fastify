@@ -16,11 +16,11 @@ function sentMessages(client: ReturnType<typeof createClient>) {
 }
 
 describe("RoomManager", () => {
-  it("creates a room and assigns the creator as X", () => {
+  it("creates a room and assigns the creator as X", async () => {
     const manager = new RoomManager();
     const client = createClient();
 
-    manager.createRoom(client, "Luka");
+    await manager.createRoom(client, "Luka");
 
     const messages = sentMessages(client);
 
@@ -30,7 +30,7 @@ describe("RoomManager", () => {
     });
     expect(messages[1]).toMatchObject({
       type: "game_state",
-      board: Array(9).fill(null),
+      board: Array(9).fill("EMPTY"),
       turn: "X",
       players: {
         X: "Luka",
@@ -42,7 +42,7 @@ describe("RoomManager", () => {
   it("detects a winning line", () => {
     const manager = new RoomManager();
 
-    expect(manager.checkWinner(["X", "X", "X", null, null, null, null, null, null])).toBe(
+    expect(manager.checkWinner(["X", "X", "X", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY"])).toBe(
       "X",
     );
   });
@@ -53,5 +53,20 @@ describe("RoomManager", () => {
     expect(manager.checkWinner(["X", "O", "X", "X", "O", "O", "O", "X", "X"])).toBe(
       "draw",
     );
+  });
+
+  it("sends a specific error when joining a missing room", async () => {
+    const manager = new RoomManager();
+    const client = createClient();
+
+    await manager.joinRoom("missing", client, "Luka");
+
+    expect(sentMessages(client)).toEqual([
+      {
+        type: "error",
+        code: "roomNotFound",
+        message: "Room not found.",
+      },
+    ]);
   });
 });

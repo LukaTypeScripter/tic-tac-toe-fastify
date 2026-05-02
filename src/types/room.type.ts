@@ -4,7 +4,7 @@ import type { WebSocketClient } from "./web-socket-client.type.js";
 
 export const PlayerSchema = Type.Union([Type.Literal("X"), Type.Literal("O")]);
 
-export const CellSchema = Type.Union([PlayerSchema, Type.Null()]);
+export const CellSchema = Type.Union([PlayerSchema,Type.Literal("EMPTY")]);
 
 export const WinnerSchema = Type.Union([
   PlayerSchema,
@@ -14,7 +14,7 @@ export const WinnerSchema = Type.Union([
 
 export const RoomPlayerSchema = Type.Object({
   nickname: Type.String({ minLength: 1, maxLength: 24 }),
-  client: Type.Unsafe<WebSocketClient>(),
+  client: Type.Optional(Type.Unsafe<WebSocketClient>()),
 });
 
 export const RoomSchema = Type.Object({

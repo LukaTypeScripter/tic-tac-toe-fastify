@@ -5,12 +5,19 @@ import fastify, { type FastifyInstance } from "fastify";
 import { registerHealthRoutes } from "./routes/health.routes.js";
 import { gameRoutes } from "./routes/game.routes.js";
 import drizzlePlugin from "./plugins/drizzle.js";
+import repositoriesPlugin from "./plugins/repositories.js";
+import {loadEnvFile} from "node:process";
+import {existsSync} from "node:fs";
 
 export type AppOptions = {
   staticDir: string;
   logger?: boolean;
   database?: boolean;
 };
+
+if (existsSync(".env")) {
+  loadEnvFile(".env");
+}
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = fastify({
@@ -19,6 +26,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   if (options.database ?? true) {
     await app.register(drizzlePlugin);
+    await app.register(repositoriesPlugin);
   }
 
   await app.register(fastifyWebsocket);

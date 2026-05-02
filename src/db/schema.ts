@@ -1,4 +1,4 @@
-import {pgEnum, pgTable, primaryKey, timestamp, varchar} from "drizzle-orm/pg-core";
+import {pgEnum, pgTable, primaryKey, timestamp, uuid, varchar} from "drizzle-orm/pg-core";
 
 export const playerMarkEnum = pgEnum("player_move_type", [
     "X",
@@ -14,12 +14,12 @@ export const sessionRoleEnum = pgEnum("session_role", [
 
 
 export const PLAYER_TABLE = pgTable('player', {
-    id: varchar({ length: 255 }).primaryKey(),
+    id:  uuid("id").primaryKey().defaultRandom(),
     nickName: varchar('nick_name',{ length: 255 }).notNull(),
 });
 
 export const SESSION_TABLE  = pgTable('session', {
-    id: varchar({ length: 255 }).primaryKey(),
+    id:  uuid("id").primaryKey().defaultRandom(),
     playerId: varchar('player_id', { length: 255 }).notNull().references(() => PLAYER_TABLE.id, { onDelete: 'cascade'}),
     roomId: varchar('room_id', { length: 255 }).references(() => ROOM_TABLE.id, { onDelete: 'set null'}),
     role: sessionRoleEnum('role').notNull(),
