@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tic-tac-toe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tic_tac_toe
+      POSTGRES_USER: tic_tac_toe
+      POSTGRES_PASSWORD: tic_tac_toe
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tic_tac_toe -d tic_tac_toe"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

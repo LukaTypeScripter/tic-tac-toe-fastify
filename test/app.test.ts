@@ -9,7 +9,7 @@ const staticDir = path.resolve(process.cwd(), "public");
 const apps: FastifyInstance[] = [];
 
 async function createTestApp() {
-  const app = await buildApp({ staticDir, logger: false });
+  const app = await buildApp({ staticDir, logger: false, database: false });
   apps.push(app);
   return app;
 }
