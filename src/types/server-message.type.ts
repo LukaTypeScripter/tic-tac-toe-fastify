@@ -63,11 +63,16 @@ export const ResetGameMessageSchema = Type.Object({
   roomId: Type.String(),
 });
 
+export const LeaveRoomMessageSchema = Type.Object({
+  type: Type.Literal("leave_room"),
+});
+
 export const ClientMessageSchema = Type.Union([
   CreateRoomMessageSchema,
   JoinRoomMessageSchema,
   MakeMoveMessageSchema,
   ResetGameMessageSchema,
+  LeaveRoomMessageSchema,
 ]);
 
 export type ClientMessage = Static<typeof ClientMessageSchema>;

@@ -7,7 +7,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -w -p tsconfig.json",
     "start": "node dist/server.js",
+    "start:watch": "nodemon --watch dist --ext js,mjs,cjs --exec \"node dist/server.js\"",
+    "dev": "concurrently -k \"npm:build:watch\" \"npm:start:watch\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -28,7 +31,9 @@
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.10",
+    "nodemon": "^3.1.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   }

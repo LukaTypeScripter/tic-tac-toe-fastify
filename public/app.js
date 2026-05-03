@@ -10,11 +10,16 @@ const createRoomButton = document.querySelector("#createRoom");
 const joinForm = document.querySelector("#joinForm");
 const nicknameInput = document.querySelector("#nicknameInput");
 const roomInput = document.querySelector("#roomInput");
+const leaveButton = document.querySelector("#leaveRoom");
 const resetButton = document.querySelector("#resetGame");
 const board = document.querySelector("#board");
 
 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-const socket = new WebSocket(`${protocol}//${window.location.host}/game`);
+const socketUrl = `${protocol}//${window.location.host}/game`;
+const STORAGE_KEY = "ws-chat/session";
+let socket = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
 
 let roomId = null;
 let player = null;
@@ -25,8 +30,46 @@ let state = {
   winner: null,
 };
 
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return { nickname: "", roomId: "" };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      nickname: typeof parsed.nickname === "string" ? parsed.nickname : "",
+      roomId: typeof parsed.roomId === "string" ? parsed.roomId : "",
+    };
+  } catch {
+    return { nickname: "", roomId: "" };
+  }
+}
+
+function saveSession() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      nickname: nicknameInput.value.trim(),
+      roomId: roomInput.value.trim(),
+    }),
+  );
+}
+
+function tryAutoJoin() {
+  const nickname = nicknameInput.value.trim();
+  const storedRoomId = roomInput.value.trim();
+
+  if (!nickname || !storedRoomId) {
+    return;
+  }
+
+  send({ type: "join_room", roomId: storedRoomId, nickname });
+}
+
 function send(payload) {
-  if (socket.readyState !== WebSocket.OPEN) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
     setMessage("Connection is not ready.");
     return;
   }
@@ -62,7 +105,7 @@ function renderBoard() {
     const cell = document.createElement("button");
     cell.className = "cell";
     cell.type = "button";
-    cell.textContent = value ?? "";
+    cell.textContent = value === "EMPTY" || value == null ? "" : value;
     cell.ariaLabel = `Cell ${index + 1}`;
     cell.disabled = !canMove(index);
     cell.addEventListener("click", () => {
@@ -73,14 +116,28 @@ function renderBoard() {
 }
 
 function canMove(index) {
+  const value = state.board[index];
   return Boolean(
     roomId &&
       player &&
       player !== "spectator" &&
       state.turn === player &&
       !state.winner &&
-      !state.board[index],
+      (value === "EMPTY" || value == null),
   );
+}
+
+function resetLobbyState() {
+  roomId = null;
+  player = null;
+  state = {
+    board: Array(9).fill(null),
+    turn: "X",
+    players: {},
+    winner: null,
+  };
+  roomInput.value = "";
+  saveSession();
 }
 
 function renderState() {
@@ -100,6 +157,7 @@ function renderState() {
     resultLabel.textContent = "Playing";
   }
 
+  leaveButton.disabled = !roomId;
   resetButton.disabled = !roomId;
   renderBoard();
 }
@@ -108,6 +166,7 @@ function handleRoomJoined(payload) {
   roomId = payload.roomId;
   player = payload.player;
   roomInput.value = roomId;
+  saveSession();
   setMessage(`Joined as ${player}. Share room ${roomId}.`);
   renderState();
 }
@@ -123,36 +182,62 @@ function handleGameState(payload) {
   renderState();
 }
 
-socket.addEventListener("open", () => {
-  setStatus("Online", "online");
-  createRoomButton.disabled = false;
-  setMessage("Create a room or join one with a room id.");
-});
-
-socket.addEventListener("message", (event) => {
-  const payload = JSON.parse(event.data);
-
-  if (payload.type === "room_joined") {
-    handleRoomJoined(payload);
+function scheduleReconnect() {
+  if (reconnectTimer) {
     return;
   }
 
-  if (payload.type === "game_state") {
-    handleGameState(payload);
-    return;
-  }
+  reconnectAttempts += 1;
+  const waitMs = Math.min(1000 * reconnectAttempts, 5000);
+  setStatus("Reconnecting", "offline");
+  setMessage(`Disconnected. Retrying in ${Math.ceil(waitMs / 1000)}s...`);
 
-  if (payload.type === "error") {
-    setMessage(payload.message);
-  }
-});
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = null;
+    connectSocket();
+  }, waitMs);
+}
 
-socket.addEventListener("close", () => {
-  setStatus("Offline", "offline");
-  createRoomButton.disabled = true;
-  resetButton.disabled = true;
-  setMessage("Disconnected from server.");
-});
+function connectSocket() {
+  socket = new WebSocket(socketUrl);
+
+  socket.addEventListener("open", () => {
+    reconnectAttempts = 0;
+    setStatus("Online", "online");
+    createRoomButton.disabled = false;
+    setMessage("Create a room or join one with a room id.");
+    tryAutoJoin();
+  });
+
+  socket.addEventListener("message", (event) => {
+    const payload = JSON.parse(event.data);
+
+    if (payload.type === "room_joined") {
+      handleRoomJoined(payload);
+      return;
+    }
+
+    if (payload.type === "game_state") {
+      handleGameState(payload);
+      return;
+    }
+
+    if (payload.type === "error") {
+      setMessage(payload.message);
+    }
+  });
+
+  socket.addEventListener("close", () => {
+    createRoomButton.disabled = true;
+    leaveButton.disabled = true;
+    resetButton.disabled = true;
+    scheduleReconnect();
+  });
+
+  socket.addEventListener("error", () => {
+    socket?.close();
+  });
+}
 
 createRoomButton.addEventListener("click", () => {
   const nickname = getNickname();
@@ -161,6 +246,7 @@ createRoomButton.addEventListener("click", () => {
     return;
   }
 
+  saveSession();
   send({ type: "create_room", nickname });
 });
 
@@ -180,6 +266,7 @@ joinForm.addEventListener("submit", (event) => {
     return;
   }
 
+  saveSession();
   send({ type: "join_room", roomId: requestedRoomId, nickname });
 });
 
@@ -187,4 +274,20 @@ resetButton.addEventListener("click", () => {
   send({ type: "reset_game", roomId });
 });
 
+leaveButton.addEventListener("click", () => {
+  if (!roomId) {
+    return;
+  }
+
+  send({ type: "leave_room" });
+  resetLobbyState();
+  setMessage("Left room. Create or join again.");
+  renderState();
+});
+
+const savedSession = loadSession();
+nicknameInput.value = savedSession.nickname;
+roomInput.value = savedSession.roomId;
+
+connectSocket();
 renderState();

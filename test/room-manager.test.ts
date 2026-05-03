@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { GameEngine } from "../src/services/game-engine.js";
 import { RoomManager } from "../src/services/room-manager.js";
 
 const open = 1;
@@ -40,17 +41,17 @@ describe("RoomManager", () => {
   });
 
   it("detects a winning line", () => {
-    const manager = new RoomManager();
+    const engine = new GameEngine();
 
-    expect(manager.checkWinner(["X", "X", "X", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY"])).toBe(
+    expect(engine.checkWinner(["X", "X", "X", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY"])).toBe(
       "X",
     );
   });
 
   it("detects a draw", () => {
-    const manager = new RoomManager();
+    const engine = new GameEngine();
 
-    expect(manager.checkWinner(["X", "O", "X", "X", "O", "O", "O", "X", "X"])).toBe(
+    expect(engine.checkWinner(["X", "O", "X", "X", "O", "O", "O", "X", "X"])).toBe(
       "draw",
     );
   });
