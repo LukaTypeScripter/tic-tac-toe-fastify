@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Real-Time Tic Tac Toe</title>
+    <title>Live Tic Tac Toe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -11,13 +17,14 @@
       <section class="game" aria-label="Tic Tac Toe">
         <header class="game-header">
           <div>
-            <h1>Tic Tac Toe</h1>
+            <h1>Live tic tac toe</h1>
             <p id="roomLabel" class="muted">No room joined</p>
           </div>
           <span id="status" class="status">Connecting</span>
         </header>
 
         <section class="room-controls" aria-label="Room controls">
+          <div class="section-label">Lobby</div>
           <form id="joinForm" class="join-form">
             <input
               id="nicknameInput"
@@ -40,6 +47,7 @@
           </form>
         </section>
 
+        <div class="section-label">Game</div>
         <section class="game-info" aria-label="Game status">
           <div>
             <span class="label">You</span>
@@ -63,7 +71,9 @@
           </div>
         </section>
 
-        <section id="board" class="board" aria-label="Game board"></section>
+        <div class="board-wrap">
+          <section id="board" class="board" aria-label="Game board"></section>
+        </div>
 
         <footer class="game-footer">
           <p id="message" class="muted">Create a room or join one with a room id.</p>

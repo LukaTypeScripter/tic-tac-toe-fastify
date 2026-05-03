@@ -103,9 +103,12 @@ function renderBoard() {
 
   state.board.forEach((value, index) => {
     const cell = document.createElement("button");
+    const mark = value === "EMPTY" || value == null ? "" : value;
     cell.className = "cell";
     cell.type = "button";
-    cell.textContent = value === "EMPTY" || value == null ? "" : value;
+    cell.textContent = mark;
+    cell.classList.toggle("cell--x", mark === "X");
+    cell.classList.toggle("cell--o", mark === "O");
     cell.ariaLabel = `Cell ${index + 1}`;
     cell.disabled = !canMove(index);
     cell.addEventListener("click", () => {
